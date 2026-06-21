@@ -3,6 +3,7 @@ import '../models/activity.dart';
 import '../services/api_service.dart';
 import 'activity_detail_screen.dart';
 import 'my_registrations_screen.dart';
+import 'login_register_screen.dart';
 
 class ActivityListScreen extends StatefulWidget {
   final int userId;
@@ -50,6 +51,34 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => MyRegistrationsScreen(userId: widget.userId),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Logout'),
+                  content: const Text('Are you sure you want to logout?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (_) => const LoginRegisterScreen()),
+                          (route) => false,
+                        );
+                      },
+                      child: const Text('Logout', style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
                 ),
               );
             },

@@ -12,6 +12,9 @@ class MyRegistrationsScreen extends StatefulWidget {
 
 class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
   late Future<List<Map<String, dynamic>>> _registrationsFuture;
+  String _selectedFilter = 'All';
+
+  final List<String> _filterOptions = ['All', 'registered', 'cancelled'];
 
   @override
   void initState() {
@@ -23,6 +26,13 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
     setState(() {
       _registrationsFuture = ApiService.getMyRegistrations(widget.userId);
     });
+  }
+
+  List<Map<String, dynamic>> _applyFilter(List<Map<String, dynamic>> registrations) {
+    if (_selectedFilter == 'All') return registrations;
+    return registrations
+        .where((reg) => (reg['status'] ?? '') == _selectedFilter)
+        .toList();
   }
 
   Future<void> _cancel(int registrationId) async {
@@ -99,54 +109,100 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
             );
           }
 
-          final registrations = snapshot.data ?? [];
-          if (registrations.isEmpty) {
-            return const Center(child: Text('You have no registered activities yet.'));
-          }
+          final allRegistrations = snapshot.data ?? [];
+          final registrations = _applyFilter(allRegistrations);
 
-          return RefreshIndicator(
-            onRefresh: () async => _refresh(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: registrations.length,
-              itemBuilder: (context, index) {
-                final reg = registrations[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  color: Colors.white,
-                  elevation: 3,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(12),
-                    title: Text(
-                      reg['title'] ?? '',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+          return Column(
+            children: [
+              // Status filter dropdown
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.filter_list, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    const Text('Filter by status:'),
+                    const SizedBox(width: 12),
+                    DropdownButton<String>(
+                      value: _selectedFilter,
+                      items: _filterOptions.map((option) {
+                        return DropdownMenuItem(
+                          value: option,
+                          child: Text(
+                            option == 'All' ? 'All' : option[0].toUpperCase() + option.substring(1),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _selectedFilter = value);
+                        }
+                      },
                     ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('📍 ${reg['location']}'),
-                          Text('📅 ${reg['activity_date']}'),
-                          Text('Status: ${reg['status']}'),
-                        ],
-                      ),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.cancel, color: Colors.red),
-                      tooltip: 'Cancel registration',
-                      onPressed: () {
-                        final regId = reg['registration_id'] is int
-                            ? reg['registration_id']
-                            : int.parse(reg['registration_id'].toString());
-                        _confirmCancel(regId, reg['title'] ?? '');
+                  ],
+                ),
+              ),
+
+              if (allRegistrations.isEmpty)
+                const Expanded(
+                  child: Center(child: Text('You have no registered activities yet.')),
+                )
+              else if (registrations.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Text('No registrations with status "$_selectedFilter".'),
+                  ),
+                )
+              else
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async => _refresh(),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: registrations.length,
+                      itemBuilder: (context, index) {
+                        final reg = registrations[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          color: Colors.white,
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(12),
+                            title: Text(
+                              reg['title'] ?? '',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('📍 ${reg['location']}'),
+                                  Text('📅 ${reg['activity_date']}'),
+                                  Text('Status: ${reg['status']}'),
+                                ],
+                              ),
+                            ),
+                            trailing: reg['status'] == 'cancelled'
+                                ? const Icon(Icons.block, color: Colors.grey)
+                                : IconButton(
+                                    icon: const Icon(Icons.cancel, color: Colors.red),
+                                    tooltip: 'Cancel registration',
+                                    onPressed: () {
+                                      final regId = reg['registration_id'] is int
+                                          ? reg['registration_id']
+                                          : int.parse(reg['registration_id'].toString());
+                                      _confirmCancel(regId, reg['title'] ?? '');
+                                    },
+                                  ),
+                          ),
+                        );
                       },
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+            ],
           );
         },
       ),
