@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import '../models/activity.dart';
 import '../services/api_service.dart';
+import 'activity_detail_screen.dart';
+import 'my_registrations_screen.dart';
 
 class ActivityListScreen extends StatefulWidget {
-  const ActivityListScreen({super.key});
+  final int userId;
+  final String userName;
+
+  const ActivityListScreen({
+    super.key,
+    required this.userId,
+    required this.userName,
+  });
 
   @override
   State<ActivityListScreen> createState() => _ActivityListScreenState();
@@ -33,6 +42,19 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
         title: const Text('Campus Activities'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.event_note),
+            tooltip: 'My Registrations',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => MyRegistrationsScreen(userId: widget.userId),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: FutureBuilder<List<Activity>>(
         future: _activitiesFuture,
@@ -80,23 +102,36 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(12),
-                    title: Text(
-                      activity.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(activity.description),
-                          const SizedBox(height: 4),
-                          Text('📍 ${activity.location}'),
-                          Text('📅 ${activity.activityDate}'),
-                          Text('👥 Capacity: ${activity.capacity}'),
-                        ],
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ActivityDetailScreen(
+                            activity: activity,
+                            userId: widget.userId,
+                          ),
+                        ),
+                      );
+                    },
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(12),
+                      title: Text(
+                        activity.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(activity.description),
+                            const SizedBox(height: 4),
+                            Text('📍 ${activity.location}'),
+                            Text('📅 ${activity.activityDate}'),
+                            Text('👥 Capacity: ${activity.capacity}'),
+                          ],
+                        ),
                       ),
                     ),
                   ),
