@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import '../models/activity.dart';
 import '../services/api_service.dart';
+import 'add_edit_activity_screen.dart';
 
 class ActivityDetailScreen extends StatefulWidget {
   final Activity activity;
   final int userId;
+  final String userRole;
 
   const ActivityDetailScreen({
     super.key,
     required this.activity,
     required this.userId,
+    required this.userRole,
   });
 
   @override
@@ -18,34 +21,70 @@ class ActivityDetailScreen extends StatefulWidget {
 
 class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   bool _isRegistering = false;
+  bool get isAdmin => widget.userRole == 'admin';
 
   Future<void> _register() async {
     setState(() => _isRegistering = true);
-
     try {
       await ApiService.registerForActivity(
         userId: widget.userId,
         activityId: widget.activity.activityId,
       );
-
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Successfully registered!'),
-          backgroundColor: Colors.green,
-        ),
+        SnackBar(content: const Text('Successfully registered!'), backgroundColor: Colors.teal[700]),
       );
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(false);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.red[400],
         ),
       );
     } finally {
       if (mounted) setState(() => _isRegistering = false);
+    }
+  }
+
+  Future<void> _delete() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Activity'),
+        content: Text('Delete "${widget.activity.title}"? All registrations will also be removed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel', style: TextStyle(color: Colors.teal[700])),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ApiService.deleteActivity(widget.activity.activityId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: const Text('Activity deleted'), backgroundColor: Colors.teal[700]),
+      );
+      Navigator.of(context).pop(true); // true = list needs refresh
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red[400],
+        ),
+      );
     }
   }
 
@@ -54,59 +93,124 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
     final activity = widget.activity;
 
     return Scaffold(
-      backgroundColor: Colors.grey[200],
+      backgroundColor: Colors.teal[50],
       appBar: AppBar(
         title: const Text('Activity Details'),
-        backgroundColor: Colors.blue,
+        backgroundColor: Colors.teal[700],
         foregroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        ),
+        // Admin edit shortcut in AppBar
+        actions: isAdmin
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: 'Edit Activity',
+                  onPressed: () async {
+                    final result = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) => AddEditActivityScreen(activity: activity),
+                      ),
+                    );
+                    if (result == true && mounted) Navigator.of(context).pop(true);
+                  },
+                ),
+              ]
+            : null,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              activity.title,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            const SizedBox(height: 8),
+            // Title banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.teal[700]!, Colors.teal[400]!],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.event_rounded, color: Colors.white, size: 36),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      activity.title,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
+
+            // Detail card
             Card(
               color: Colors.white,
               elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _DetailRow(icon: Icons.description, label: 'Description', value: activity.description),
-                    const Divider(),
-                    _DetailRow(icon: Icons.location_on, label: 'Location', value: activity.location),
-                    const Divider(),
-                    _DetailRow(icon: Icons.calendar_today, label: 'Date', value: activity.activityDate),
-                    const Divider(),
-                    _DetailRow(icon: Icons.people, label: 'Capacity', value: '${activity.capacity} students'),
+                    _DetailRow(icon: Icons.description_outlined, label: 'Description', value: activity.description, color: Colors.teal[700]!),
+                    const Divider(height: 20),
+                    _DetailRow(icon: Icons.location_on_outlined, label: 'Location', value: activity.location, color: Colors.green[700]!),
+                    const Divider(height: 20),
+                    _DetailRow(icon: Icons.calendar_today_outlined, label: 'Date', value: activity.activityDate, color: Colors.teal[600]!),
+                    const Divider(height: 20),
+                    _DetailRow(icon: Icons.people_outline, label: 'Capacity', value: '${activity.capacity} students', color: Colors.teal[500]!),
                   ],
                 ),
               ),
             ),
+
             const Spacer(),
+
+            // Admin buttons
+            if (isAdmin) ...[
+              OutlinedButton.icon(
+                onPressed: _delete,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Delete Activity'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+
+            // Register button (everyone can register)
             ElevatedButton.icon(
               onPressed: _isRegistering ? null : _register,
               icon: _isRegistering
-                  ? const SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                    )
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : const Icon(Icons.check_circle_outline),
-              label: Text(_isRegistering ? 'Registering...' : 'Register for this Activity'),
+              label: Text(
+                _isRegistering ? 'Registering...' : 'Register for this Activity',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                backgroundColor: Colors.blue,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Colors.teal[700],
                 foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                elevation: 2,
               ),
             ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -118,29 +222,35 @@ class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Color color;
 
-  const _DetailRow({required this.icon, required this.label, required this.value});
+  const _DetailRow({required this.icon, required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: Colors.blue[700]),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                Text(value, style: const TextStyle(fontSize: 15)),
-              ],
-            ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
           ),
-        ],
-      ),
+          child: Icon(icon, size: 18, color: color),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+              const SizedBox(height: 2),
+              Text(value, style: const TextStyle(fontSize: 15)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

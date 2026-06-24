@@ -14,7 +14,8 @@ class MyApp extends StatelessWidget {
       title: 'Activity Registration App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+        primaryColor: Colors.teal[700],
         useMaterial3: true,
       ),
       home: const LoginRegisterScreen(),
