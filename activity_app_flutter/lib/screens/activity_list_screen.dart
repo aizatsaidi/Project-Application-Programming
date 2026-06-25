@@ -127,9 +127,22 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
             ],
           ),
         ),
-        backgroundColor: Colors.teal[700],
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
+        flexibleSpace: ClipRRect(
+          child: Stack(
+            children: [
+              // Base teal background
+              Container(color: Colors.teal[700]),
+              // Corak pattern on top
+              CustomPaint(
+                painter: _AppBarPatternPainter(),
+                child: const SizedBox.expand(),
+              ),
+            ],
+          ),
+        ),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(0)),
         ),
@@ -263,7 +276,10 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                             InkWell(
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => MyRegistrationsScreen(userId: widget.userId),
+                                  builder: (_) => MyRegistrationsScreen(
+                                    userId: widget.userId,
+                                    userRole: widget.userRole,
+                                  ),
                                 ),
                               ),
                               borderRadius: BorderRadius.circular(12),
@@ -573,6 +589,36 @@ class _BackgroundPatternPainter extends CustomPainter {
         canvas.drawCircle(Offset(x, y), dotRadius, dotPaint);
       }
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// AppBar corak motif painter — soft circles only
+class _AppBarPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final accentPaint = Paint()
+      ..color = Colors.white.withOpacity(0.10)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(
+      Offset(size.width * 0.88, size.height * 0.5), 55, accentPaint);
+    canvas.drawCircle(
+      Offset(size.width * 0.05, size.height * 1.8), 65, accentPaint);
+    canvas.drawCircle(
+      Offset(size.width * 0.5, size.height * -0.5), 45, accentPaint);
+
+    final ringPaint = Paint()
+      ..color = Colors.white.withOpacity(0.07)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14;
+
+    canvas.drawCircle(
+      Offset(size.width * 0.88, size.height * 0.5), 90, ringPaint);
+    canvas.drawCircle(
+      Offset(size.width * 0.5, size.height * -0.5), 80, ringPaint);
   }
 
   @override

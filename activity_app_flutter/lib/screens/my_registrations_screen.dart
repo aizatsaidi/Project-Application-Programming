@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import '../models/activity.dart';
 import '../services/api_service.dart';
+import 'activity_detail_screen.dart';
 
 class MyRegistrationsScreen extends StatefulWidget {
   final int userId;
+  final String userRole;
 
-  const MyRegistrationsScreen({super.key, required this.userId});
+  const MyRegistrationsScreen({
+    super.key,
+    required this.userId,
+    required this.userRole,
+  });
 
   @override
   State<MyRegistrationsScreen> createState() => _MyRegistrationsScreenState();
@@ -87,8 +94,9 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
       backgroundColor: Colors.teal[50],
       appBar: AppBar(
         title: const Text('My Registrations'),
-        backgroundColor: Colors.teal[700],
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        elevation: 0,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
             bottom: Radius.circular(24),
@@ -98,9 +106,14 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
           borderRadius: const BorderRadius.vertical(
             bottom: Radius.circular(24),
           ),
-          child: CustomPaint(
-            painter: _AppBarPatternPainter(),
-            child: Container(color: Colors.teal[700]!.withOpacity(0.95)),
+          child: Stack(
+            children: [
+              Container(color: Colors.teal[700]),
+              CustomPaint(
+                painter: _AppBarPatternPainter(),
+                child: const SizedBox.expand(),
+              ),
+            ],
           ),
         ),
       ),
@@ -229,7 +242,33 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
                                 ? BorderSide(color: Colors.grey[300]!)
                                 : BorderSide(color: Colors.teal[100]!),
                           ),
-                          child: Padding(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () {
+                              // Convert the registration map to an Activity object
+                              final activity = Activity(
+                                activityId: reg['activity_id'] is int
+                                    ? reg['activity_id']
+                                    : int.parse(reg['activity_id'].toString()),
+                                title: reg['title'] ?? '',
+                                description: reg['description'] ?? '',
+                                location: reg['location'] ?? '',
+                                activityDate: reg['activity_date'] ?? '',
+                                capacity: reg['capacity'] is int
+                                    ? reg['capacity']
+                                    : int.parse(reg['capacity'].toString()),
+                              );
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ActivityDetailScreen(
+                                    activity: activity,
+                                    userId: widget.userId,
+                                    userRole: widget.userRole,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Padding(
                             padding: const EdgeInsets.all(14),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,6 +352,7 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
                               ],
                             ),
                           ),
+                          ),
                         );
                       },
                     ),
@@ -374,30 +414,30 @@ class _BackgroundPatternPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// AppBar corak motif painter — white dots on teal background
+// AppBar corak motif painter — soft circles only
 class _AppBarPatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final dotPaint = Paint()
-      ..color = Colors.white.withOpacity(0.08)
-      ..style = PaintingStyle.fill;
-
-    const double spacing = 20;
-    const double radius = 2.0;
-
-    for (double x = spacing; x < size.width; x += spacing) {
-      for (double y = spacing; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), radius, dotPaint);
-      }
-    }
-
-    // Soft accent circles on the AppBar
     final accentPaint = Paint()
-      ..color = Colors.white.withOpacity(0.06)
+      ..color = Colors.white.withOpacity(0.10)
       ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(Offset(size.width * 0.85, size.height * 0.5), 50, accentPaint);
-    canvas.drawCircle(Offset(size.width * 0.1, size.height * 1.2), 60, accentPaint);
+    canvas.drawCircle(
+      Offset(size.width * 0.88, size.height * 0.5), 55, accentPaint);
+    canvas.drawCircle(
+      Offset(size.width * 0.05, size.height * 1.8), 65, accentPaint);
+    canvas.drawCircle(
+      Offset(size.width * 0.5, size.height * -0.5), 45, accentPaint);
+
+    final ringPaint = Paint()
+      ..color = Colors.white.withOpacity(0.07)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14;
+
+    canvas.drawCircle(
+      Offset(size.width * 0.88, size.height * 0.5), 90, ringPaint);
+    canvas.drawCircle(
+      Offset(size.width * 0.5, size.height * -0.5), 80, ringPaint);
   }
 
   @override
