@@ -37,9 +37,10 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
 
   List<Map<String, dynamic>> _applyFilter(List<Map<String, dynamic>> registrations) {
     if (_selectedFilter == 'All') return registrations;
-    return registrations
-        .where((reg) => (reg['status'] ?? '') == _selectedFilter)
-        .toList();
+    return registrations.where((reg) {
+      final status = (reg['registration_status'] ?? reg['status'] ?? '').toString();
+      return status == _selectedFilter;
+    }).toList();
   }
 
   Future<void> _cancel(int registrationId) async {
@@ -230,7 +231,10 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
                       itemCount: registrations.length,
                       itemBuilder: (context, index) {
                         final reg = registrations[index];
-                        final isCancelled = reg['status'] == 'cancelled';
+                        final regStatus = (reg['registration_status'] ?? reg['status'] ?? '').toString();
+                        final activityStatus = (reg['activity_status'] ?? 'upcoming').toString();
+                        final isCancelled = regStatus == 'cancelled';
+                        final isActivityCompleted = activityStatus == 'completed';
 
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -307,27 +311,59 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
                                       Text('📅 ${reg['activity_date']}',
                                           style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                                       const SizedBox(height: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: isCancelled
-                                              ? Colors.grey[200]
-                                              : Colors.teal[50],
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: Text(
-                                          isCancelled ? 'Cancelled' : 'Registered',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: isCancelled ? Colors.grey[500] : Colors.teal[700],
+                                      Row(
+                                        children: [
+                                          // Registration status badge
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: isCancelled
+                                                  ? Colors.grey[200]
+                                                  : Colors.teal[50],
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              isCancelled ? 'Cancelled' : 'Registered',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: isCancelled ? Colors.grey[500] : Colors.teal[700],
+                                              ),
+                                            ),
                                           ),
-                                        ),
+                                          // Activity completed badge
+                                          if (isActivityCompleted) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green[50],
+                                                borderRadius: BorderRadius.circular(20),
+                                                border: Border.all(color: Colors.green[300]!),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.task_alt, size: 11, color: Colors.green[700]),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                    'Completed',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: Colors.green[700],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ],
                                   ),
                                 ),
-                                if (!isCancelled)
+                                if (!isCancelled && !isActivityCompleted)
                                   OutlinedButton.icon(
                                     icon: const Icon(Icons.cancel_outlined, size: 16),
                                     label: const Text('Cancel'),
@@ -347,7 +383,7 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
                                       _confirmCancel(regId, reg['title'] ?? '');
                                     },
                                   )
-                                else
+                                else if (isCancelled)
                                   const Icon(Icons.block, color: Colors.grey, size: 20),
                               ],
                             ),

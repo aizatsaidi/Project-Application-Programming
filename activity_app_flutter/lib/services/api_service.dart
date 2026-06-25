@@ -84,6 +84,24 @@ class ApiService {
     }
   }
 
+  static Future<void> updateActivityStatus({
+    required int activityId,
+    required String status,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/update_activity_status.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'activity_id': activityId,
+        'status': status,
+      }),
+    );
+    final decoded = jsonDecode(response.body);
+    if (decoded['success'] != true) {
+      throw Exception(decoded['message'] ?? 'Failed to update activity status');
+    }
+  }
+
   // ─── Auth ─────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> registerUser({

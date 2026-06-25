@@ -21,6 +21,7 @@ class ActivityDetailScreen extends StatefulWidget {
 
 class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   bool _isRegistering = false;
+  bool _isUpdatingStatus = false;
   bool get isAdmin => widget.userRole == 'admin';
 
   Future<void> _register() async {
@@ -45,6 +46,57 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
       );
     } finally {
       if (mounted) setState(() => _isRegistering = false);
+    }
+  }
+
+  Future<void> _markAsCompleted() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Mark as Completed'),
+        content: Text(
+            'Mark "${widget.activity.title}" as completed?\nIt will be removed from the Upcoming Activities list but users who registered can still see it.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel', style: TextStyle(color: Colors.teal[700])),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Mark Completed',
+                style: TextStyle(color: Colors.green)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isUpdatingStatus = true);
+    try {
+      await ApiService.updateActivityStatus(
+        activityId: widget.activity.activityId,
+        status: 'completed',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Activity marked as completed'),
+          backgroundColor: Colors.green[700],
+        ),
+      );
+      Navigator.of(context).pop(true); // refresh the list
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red[400],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isUpdatingStatus = false);
     }
   }
 
@@ -177,6 +229,36 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
 
             // Admin buttons
             if (isAdmin) ...[
+              // Mark as Completed button
+              ElevatedButton.icon(
+                onPressed: (_isUpdatingStatus || widget.activity.status == 'completed')
+                    ? null
+                    : _markAsCompleted,
+                icon: _isUpdatingStatus
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.task_alt_outlined),
+                label: Text(
+                  widget.activity.status == 'completed'
+                      ? 'Already Completed'
+                      : _isUpdatingStatus
+                          ? 'Updating...'
+                          : 'Mark as Completed',
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: widget.activity.status == 'completed'
+                      ? Colors.grey[400]
+                      : Colors.green[700],
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                ),
+              ),
+              const SizedBox(height: 10),
               OutlinedButton.icon(
                 onPressed: _delete,
                 icon: const Icon(Icons.delete_outline),
