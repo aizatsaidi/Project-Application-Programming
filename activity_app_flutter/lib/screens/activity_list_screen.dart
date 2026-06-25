@@ -177,9 +177,11 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
           : null,
       body: Stack(
         children: [
-          // Background corak motif
-          SizedBox.expand(
-            child: CustomPaint(painter: _BackgroundPatternPainter()),
+          // Background corak motif — IgnorePointer so it never blocks touches
+          IgnorePointer(
+            child: SizedBox.expand(
+              child: CustomPaint(painter: _BackgroundPatternPainter()),
+            ),
           ),
           // Main content
           FutureBuilder<List<Activity>>(

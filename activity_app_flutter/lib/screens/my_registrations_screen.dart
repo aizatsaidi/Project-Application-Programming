@@ -94,8 +94,26 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
             bottom: Radius.circular(24),
           ),
         ),
+        flexibleSpace: ClipRRect(
+          borderRadius: const BorderRadius.vertical(
+            bottom: Radius.circular(24),
+          ),
+          child: CustomPaint(
+            painter: _AppBarPatternPainter(),
+            child: Container(color: Colors.teal[700]!.withOpacity(0.95)),
+          ),
+        ),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
+      body: Stack(
+        children: [
+          // Background corak
+          IgnorePointer(
+            child: SizedBox.expand(
+              child: CustomPaint(painter: _BackgroundPatternPainter()),
+            ),
+          ),
+          // Main content
+          FutureBuilder<List<Map<String, dynamic>>>(
         future: _registrationsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -304,6 +322,84 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
           );
         },
       ),
+        ],
+      ),
     );
   }
+}
+
+// Background corak motif painter
+class _BackgroundPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final circlePaint = Paint()
+      ..color = Colors.teal.withOpacity(0.13)
+      ..style = PaintingStyle.fill;
+
+    final circlePaint2 = Paint()
+      ..color = Colors.green.withOpacity(0.11)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(Offset(size.width * 0.92, size.height * 0.08), 110, circlePaint);
+    canvas.drawCircle(Offset(size.width * 0.05, size.height * 0.30), 90, circlePaint2);
+    canvas.drawCircle(Offset(size.width * 0.88, size.height * 0.55), 80, circlePaint);
+    canvas.drawCircle(Offset(size.width * 0.15, size.height * 0.75), 70, circlePaint2);
+    canvas.drawCircle(Offset(size.width * 0.70, size.height * 0.90), 95, circlePaint);
+
+    final ringPaint = Paint()
+      ..color = Colors.teal.withOpacity(0.10)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 18;
+
+    canvas.drawCircle(Offset(size.width * 0.92, size.height * 0.08), 160, ringPaint);
+    canvas.drawCircle(Offset(size.width * 0.05, size.height * 0.30), 140, ringPaint);
+    canvas.drawCircle(Offset(size.width * 0.88, size.height * 0.55), 130, ringPaint);
+
+    final dotPaint = Paint()
+      ..color = Colors.teal.withOpacity(0.20)
+      ..style = PaintingStyle.fill;
+
+    const double dotSpacingX = 28;
+    const double dotSpacingY = 28;
+    const double dotRadius = 2.2;
+
+    for (double x = dotSpacingX; x < size.width; x += dotSpacingX) {
+      for (double y = dotSpacingY; y < size.height; y += dotSpacingY) {
+        canvas.drawCircle(Offset(x, y), dotRadius, dotPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// AppBar corak motif painter — white dots on teal background
+class _AppBarPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final dotPaint = Paint()
+      ..color = Colors.white.withOpacity(0.08)
+      ..style = PaintingStyle.fill;
+
+    const double spacing = 20;
+    const double radius = 2.0;
+
+    for (double x = spacing; x < size.width; x += spacing) {
+      for (double y = spacing; y < size.height; y += spacing) {
+        canvas.drawCircle(Offset(x, y), radius, dotPaint);
+      }
+    }
+
+    // Soft accent circles on the AppBar
+    final accentPaint = Paint()
+      ..color = Colors.white.withOpacity(0.06)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(Offset(size.width * 0.85, size.height * 0.5), 50, accentPaint);
+    canvas.drawCircle(Offset(size.width * 0.1, size.height * 1.2), 60, accentPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
