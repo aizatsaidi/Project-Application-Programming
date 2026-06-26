@@ -7,13 +7,15 @@ class ActivityDetailScreen extends StatefulWidget {
   final Activity activity;
   final int userId;
   final String userRole;
+  final VoidCallback? onDeleted;
 
-  const ActivityDetailScreen({
-    super.key,
-    required this.activity,
-    required this.userId,
-    required this.userRole,
-  });
+const ActivityDetailScreen({
+  super.key,
+  required this.activity,
+  required this.userId,
+  required this.userRole,
+  this.onDeleted,
+});
 
   @override
   State<ActivityDetailScreen> createState() => _ActivityDetailScreenState();
@@ -23,6 +25,18 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   bool _isRegistering = false;
   bool _isUpdatingStatus = false;
   bool get isAdmin => widget.userRole == 'admin';
+  String _getDaysRemaining() {
+  final eventDate = DateTime.tryParse(widget.activity.activityDate);
+  if (eventDate == null) return '';
+  final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  final event = DateTime(eventDate.year, eventDate.month, eventDate.day);
+  final diff = event.difference(today).inDays;
+  if (diff == 0) return '🎉 Today!';
+  if (diff == 1) return '⏰ Tomorrow';
+  if (diff > 1) return '📅 In $diff days';
+  if (diff == -1) return '✅ Yesterday';
+  return '✅ ${diff.abs()} days ago';
+}
 
   Future<void> _register() async {
     setState(() => _isRegistering = true);
@@ -86,7 +100,8 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
           backgroundColor: Colors.green[700],
         ),
       );
-      Navigator.of(context).pop(true); // refresh the list
+      widget.onDeleted?.call();
+      Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -128,7 +143,8 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: const Text('Activity deleted'), backgroundColor: Colors.teal[700]),
       );
-      Navigator.of(context).pop(true); // true = list needs refresh
+      widget.onDeleted?.call();
+      Navigator.of(context).pop('deleted');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -220,6 +236,13 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                     _DetailRow(icon: Icons.calendar_today_outlined, label: 'Date', value: activity.activityDate, color: Colors.teal[600]!),
                     const Divider(height: 20),
                     _DetailRow(icon: Icons.people_outline, label: 'Capacity', value: '${activity.capacity} students', color: Colors.teal[500]!),
+                    const Divider(height: 20),
+                    _DetailRow(
+                      icon: Icons.timer_outlined,
+                      label: 'Time Until Event',
+                      value: _getDaysRemaining(),
+                      color: Colors.teal[700]!,
+                    ),
                   ],
                 ),
               ),

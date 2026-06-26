@@ -23,28 +23,33 @@ class ActivityListScreen extends StatefulWidget {
 }
 
 class _ActivityListScreenState extends State<ActivityListScreen> {
-  late Future<List<Activity>> _activitiesFuture;
+  List<Activity> _activities = [];
+  bool _isLoading = true;
+  String? _error;
 
   bool get isAdmin => widget.userRole == 'admin';
 
-  // Accent colors cycling through cards
   final List<Color> _accentColors = [
-    const Color(0xFF00796B), // teal 700
-    const Color(0xFF2E7D32), // green 800
-    const Color(0xFF00897B), // teal 600
-    const Color(0xFF388E3C), // green 700
+    const Color(0xFF00796B),
+    const Color(0xFF2E7D32),
+    const Color(0xFF00897B),
+    const Color(0xFF388E3C),
   ];
 
   @override
   void initState() {
     super.initState();
-    _activitiesFuture = ApiService.getActivities();
+    _loadActivities();
   }
 
-  void _refresh() {
-    setState(() {
-      _activitiesFuture = ApiService.getActivities();
-    });
+  Future<void> _loadActivities() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      final activities = await ApiService.getActivities();
+      if (mounted) setState(() { _activities = activities; _isLoading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
+    }
   }
 
   Future<void> _deleteActivity(Activity activity) async {
@@ -69,21 +74,27 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
     );
     if (confirm != true) return;
 
+    // Optimistic update — remove instantly from UI
+    final index = _activities.indexWhere((a) => a.activityId == activity.activityId);
+    setState(() { _activities.removeWhere((a) => a.activityId == activity.activityId); });
+
     try {
       await ApiService.deleteActivity(activity.activityId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: const Text('Activity deleted'), backgroundColor: Colors.teal[700]),
       );
-      _refresh();
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: Colors.red[400],
-        ),
-      );
+      // If API fails, restore the item back
+      if (mounted) {
+        setState(() { _activities.insert(index == -1 ? 0 : index, activity); });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: Colors.red[400],
+          ),
+        );
+      }
     }
   }
 
@@ -180,7 +191,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                 final result = await Navigator.of(context).push<bool>(
                   MaterialPageRoute(builder: (_) => const AddEditActivityScreen()),
                 );
-                if (result == true) _refresh();
+                if (result == true) _loadActivities();
               },
               backgroundColor: Colors.teal[700],
               foregroundColor: Colors.white,
@@ -190,45 +201,38 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
           : null,
       body: Stack(
         children: [
-          // Background corak motif — IgnorePointer so it never blocks touches
           IgnorePointer(
             child: SizedBox.expand(
               child: CustomPaint(painter: _BackgroundPatternPainter()),
             ),
           ),
-          // Main content
-          FutureBuilder<List<Activity>>(
-        future: _activitiesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator(color: Colors.teal[700]));
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Error: ${snapshot.error}'),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal[700],
-                      foregroundColor: Colors.white,
+          Builder(builder: (context) {
+            if (_isLoading) {
+              return Center(child: CircularProgressIndicator(color: Colors.teal[700]));
+            }
+            if (_error != null) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Error: $_error'),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal[700],
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: _loadActivities,
+                      child: const Text('Retry'),
                     ),
-                    onPressed: _refresh,
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final activities = snapshot.data ?? [];
-
-          return RefreshIndicator(
-            color: Colors.teal[700],
-            onRefresh: () async => _refresh(),
-            child: CustomScrollView(
+                  ],
+                ),
+              );
+            }
+            return RefreshIndicator(
+              color: Colors.teal[700],
+              onRefresh: _loadActivities,
+              child: CustomScrollView(
               slivers: [
                 // Curved header banner
                 SliverToBoxAdapter(
@@ -266,7 +270,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${activities.length} event${activities.length == 1 ? '' : 's'} available',
+                                    '${_activities.length} event${_activities.length == 1 ? '' : 's'} available',
                                     style: TextStyle(fontSize: 13, color: Colors.teal[600]),
                                   ),
                                 ],
@@ -301,7 +305,7 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                 ),
 
                 // Activity cards
-                activities.isEmpty
+                _activities.isEmpty
                     ? SliverFillRemaining(
                         child: Center(
                           child: Column(
@@ -320,23 +324,28 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              final activity = activities[index];
+                              final activity = _activities[index];
                               final accentColor = _accentColors[index % _accentColors.length];
                               return _ActivityCard(
                                 activity: activity,
                                 accentColor: accentColor,
                                 isAdmin: isAdmin,
                                 onTap: () async {
-                                  final result = await Navigator.of(context).push<bool>(
-                                    MaterialPageRoute(
-                                      builder: (_) => ActivityDetailScreen(
-                                        activity: activity,
-                                        userId: widget.userId,
-                                        userRole: widget.userRole,
-                                      ),
-                                    ),
-                                  );
-                                  if (result == true) _refresh();
+                                  final result = await Navigator.of(context).push<dynamic>(
+                                  MaterialPageRoute(
+                                    builder: (_) => ActivityDetailScreen(
+                                    activity: activity,
+                                    userId: widget.userId,
+                                    userRole: widget.userRole,
+                                    onDeleted: () {
+                                      setState(() {
+                                        _activities.removeWhere((a) => a.activityId == activity.activityId);
+                                      });
+                                    },
+                                  ),
+                                  ),
+                                );
+                                if (result == true) _loadActivities();
                                 },
                                 onEdit: () async {
                                   final result = await Navigator.of(context).push<bool>(
@@ -344,20 +353,19 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                                       builder: (_) => AddEditActivityScreen(activity: activity),
                                     ),
                                   );
-                                  if (result == true) _refresh();
+                                  if (result == true) _loadActivities();
                                 },
                                 onDelete: () => _deleteActivity(activity),
                               );
                             },
-                            childCount: activities.length,
+                            childCount: _activities.length,
                           ),
                         ),
                       ),
               ],
             ),
           );
-        },
-      ),
+          }),
         ],
       ),
     );
