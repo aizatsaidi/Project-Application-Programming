@@ -102,6 +102,17 @@ class ApiService {
     }
   }
 
+  static Future<int> getRegistrationCount(int activityId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/get_registration_count.php?activity_id=$activityId'),
+    );
+    final decoded = jsonDecode(response.body);
+    if (decoded['success'] == true) {
+      return decoded['data']['count'] as int;
+    }
+    return 0;
+  }
+
   // ─── Auth ─────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> registerUser({
@@ -185,4 +196,5 @@ class ApiService {
       throw Exception(decoded['message'] ?? 'Failed to cancel registration');
     }
   }
+
 }

@@ -27,7 +27,21 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   bool _isRegistering = false;
   bool _isUpdatingStatus = false;
   bool _isNavigating = false;
+  int _registrationCount = 0;
   bool get isAdmin => widget.userRole == 'admin';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRegistrationCount();
+  }
+
+  Future<void> _fetchRegistrationCount() async {
+    try {
+      final count = await ApiService.getRegistrationCount(widget.activity.activityId);
+      if (mounted) setState(() => _registrationCount = count);
+    } catch (_) {}
+  }
 
   String _getDaysRemaining() {
     final eventDate = DateTime.tryParse(widget.activity.activityDate);
@@ -255,6 +269,15 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                     _DetailRow(icon: Icons.calendar_today_outlined, label: 'Date', value: activity.activityDate, color: Colors.teal[600]!),
                     const Divider(height: 20),
                     _DetailRow(icon: Icons.people_outline, label: 'Capacity', value: '${activity.capacity} students', color: Colors.teal[500]!),
+                    const Divider(height: 20),
+                    _DetailRow(
+                      icon: Icons.how_to_reg_outlined,
+                      label: 'Registered',
+                      value: '$_registrationCount / ${activity.capacity} registered',
+                      color: _registrationCount >= activity.capacity
+                          ? Colors.red[600]!
+                          : Colors.teal[700]!,
+                    ),
                     const Divider(height: 20),
                     _DetailRow(icon: Icons.timer_outlined, label: 'Time Until Event', value: _getDaysRemaining(), color: Colors.teal[700]!),
                   ],
