@@ -118,7 +118,6 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
       );
       await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted) return;
-      // onCompleted — removes from Upcoming Activities only
       widget.onCompleted?.call();
       Navigator.of(context).pop();
     } catch (e) {
@@ -158,11 +157,8 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
     try {
       await ApiService.deleteActivity(widget.activity.activityId);
       if (!mounted) return;
-
       await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted) return;
-
-      // onDeleted — removes from both Upcoming Activities and My Registrations
       widget.onDeleted?.call();
       Navigator.of(context).pop();
     } catch (e) {
@@ -179,6 +175,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final activity = widget.activity;
+    final isFull = _registrationCount >= activity.capacity;
 
     return Scaffold(
       backgroundColor: Colors.teal[50],
@@ -214,138 +211,143 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
       ),
       body: Stack(
         children: [
-          // Background corak
           IgnorePointer(
             child: SizedBox.expand(
               child: CustomPaint(painter: _BackgroundPatternPainter()),
             ),
           ),
-          // Main content
           Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.teal[700]!, Colors.teal[400]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+
+                // Title banner
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.teal[700]!, Colors.teal[400]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.event_rounded, color: Colors.white, size: 36),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          activity.title,
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.event_rounded, color: Colors.white, size: 36),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      activity.title,
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                const SizedBox(height: 16),
+
+                // Detail card
+                Card(
+                  color: Colors.white,
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        _DetailRow(icon: Icons.description_outlined, label: 'Description', value: activity.description, color: Colors.teal[700]!),
+                        const Divider(height: 20),
+                        _DetailRow(icon: Icons.location_on_outlined, label: 'Location', value: activity.location, color: Colors.green[700]!),
+                        const Divider(height: 20),
+                        _DetailRow(icon: Icons.calendar_today_outlined, label: 'Date', value: activity.activityDate, color: Colors.teal[600]!),
+                        const Divider(height: 20),
+                        _DetailRow(icon: Icons.people_outline, label: 'Capacity', value: '${activity.capacity} students', color: Colors.teal[500]!),
+                        const Divider(height: 20),
+                        _DetailRow(
+                          icon: Icons.how_to_reg_outlined,
+                          label: 'Registered',
+                          value: '$_registrationCount / ${activity.capacity} registered',
+                          color: isFull ? Colors.red[600]! : Colors.teal[700]!,
+                        ),
+                        const Divider(height: 20),
+                        _DetailRow(icon: Icons.timer_outlined, label: 'Time Until Event', value: _getDaysRemaining(), color: Colors.teal[700]!),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
+                ),
 
-            Card(
-              color: Colors.white,
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _DetailRow(icon: Icons.description_outlined, label: 'Description', value: activity.description, color: Colors.teal[700]!),
-                    const Divider(height: 20),
-                    _DetailRow(icon: Icons.location_on_outlined, label: 'Location', value: activity.location, color: Colors.green[700]!),
-                    const Divider(height: 20),
-                    _DetailRow(icon: Icons.calendar_today_outlined, label: 'Date', value: activity.activityDate, color: Colors.teal[600]!),
-                    const Divider(height: 20),
-                    _DetailRow(icon: Icons.people_outline, label: 'Capacity', value: '${activity.capacity} students', color: Colors.teal[500]!),
-                    const Divider(height: 20),
-                    _DetailRow(
-                      icon: Icons.how_to_reg_outlined,
-                      label: 'Registered',
-                      value: '$_registrationCount / ${activity.capacity} registered',
-                      color: _registrationCount >= activity.capacity
-                          ? Colors.red[600]!
-                          : Colors.teal[700]!,
+                const Spacer(),
+
+                // Admin buttons
+                if (isAdmin) ...[
+                  ElevatedButton.icon(
+                    onPressed: (_isUpdatingStatus || widget.activity.status == 'completed')
+                        ? null
+                        : _markAsCompleted,
+                    icon: _isUpdatingStatus
+                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Icon(Icons.task_alt_outlined),
+                    label: Text(
+                      widget.activity.status == 'completed'
+                          ? 'Already Completed'
+                          : _isUpdatingStatus
+                              ? 'Updating...'
+                              : 'Mark as Completed',
                     ),
-                    const Divider(height: 20),
-                    _DetailRow(icon: Icons.timer_outlined, label: 'Time Until Event', value: _getDaysRemaining(), color: Colors.teal[700]!),
-                  ],
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: widget.activity.status == 'completed' ? Colors.grey[400] : Colors.green[700],
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: _delete,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Delete Activity'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                // Register button
+                ElevatedButton.icon(
+                  onPressed: (_isRegistering || isFull) ? null : _register,
+                  icon: _isRegistering
+                      ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Icon(isFull ? Icons.block : Icons.check_circle_outline),
+                  label: Text(
+                    _isRegistering
+                        ? 'Registering...'
+                        : isFull
+                            ? 'Activity Full'
+                            : 'Register for this Activity',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: isFull ? Colors.grey[400] : Colors.teal[700],
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    elevation: 2,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 8),
+              ],
             ),
-
-            const Spacer(),
-
-            if (isAdmin) ...[
-              ElevatedButton.icon(
-                onPressed: (_isUpdatingStatus || widget.activity.status == 'completed')
-                    ? null
-                    : _markAsCompleted,
-                icon: _isUpdatingStatus
-                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Icon(Icons.task_alt_outlined),
-                label: Text(
-                  widget.activity.status == 'completed'
-                      ? 'Already Completed'
-                      : _isUpdatingStatus
-                          ? 'Updating...'
-                          : 'Mark as Completed',
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: widget.activity.status == 'completed' ? Colors.grey[400] : Colors.green[700],
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                ),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: _delete,
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('Delete Activity'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-
-            ElevatedButton.icon(
-              onPressed: _isRegistering ? null : _register,
-              icon: _isRegistering
-                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Icon(Icons.check_circle_outline),
-              label: Text(
-                _isRegistering ? 'Registering...' : 'Register for this Activity',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.teal[700],
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                elevation: 2,
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
           ),
         ],
       ),
