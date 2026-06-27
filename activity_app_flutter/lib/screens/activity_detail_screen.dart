@@ -198,7 +198,16 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
               ]
             : null,
       ),
-      body: Padding(
+      body: Stack(
+        children: [
+          // Background corak
+          IgnorePointer(
+            child: SizedBox.expand(
+              child: CustomPaint(painter: _BackgroundPatternPainter()),
+            ),
+          ),
+          // Main content
+          Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,6 +323,8 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
             const SizedBox(height: 8),
           ],
         ),
+          ),
+        ],
       ),
     );
   }
@@ -354,4 +365,42 @@ class _DetailRow extends StatelessWidget {
       ],
     );
   }
+}
+
+class _BackgroundPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final circlePaint = Paint()
+      ..color = Colors.teal.withOpacity(0.13)
+      ..style = PaintingStyle.fill;
+    final circlePaint2 = Paint()
+      ..color = Colors.green.withOpacity(0.11)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(size.width * 0.92, size.height * 0.08), 110, circlePaint);
+    canvas.drawCircle(Offset(size.width * 0.05, size.height * 0.30), 90, circlePaint2);
+    canvas.drawCircle(Offset(size.width * 0.88, size.height * 0.55), 80, circlePaint);
+    canvas.drawCircle(Offset(size.width * 0.15, size.height * 0.75), 70, circlePaint2);
+    canvas.drawCircle(Offset(size.width * 0.70, size.height * 0.90), 95, circlePaint);
+    final ringPaint = Paint()
+      ..color = Colors.teal.withOpacity(0.10)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 18;
+    canvas.drawCircle(Offset(size.width * 0.92, size.height * 0.08), 160, ringPaint);
+    canvas.drawCircle(Offset(size.width * 0.05, size.height * 0.30), 140, ringPaint);
+    canvas.drawCircle(Offset(size.width * 0.88, size.height * 0.55), 130, ringPaint);
+    final dotPaint = Paint()
+      ..color = Colors.teal.withOpacity(0.20)
+      ..style = PaintingStyle.fill;
+    const double dotSpacingX = 28;
+    const double dotSpacingY = 28;
+    const double dotRadius = 2.2;
+    for (double x = dotSpacingX; x < size.width; x += dotSpacingX) {
+      for (double y = dotSpacingY; y < size.height; y += dotSpacingY) {
+        canvas.drawCircle(Offset(x, y), dotRadius, dotPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
