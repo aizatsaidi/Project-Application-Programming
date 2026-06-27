@@ -8,14 +8,16 @@ class ActivityDetailScreen extends StatefulWidget {
   final int userId;
   final String userRole;
   final VoidCallback? onDeleted;
+  final VoidCallback? onCompleted;
 
-const ActivityDetailScreen({
-  super.key,
-  required this.activity,
-  required this.userId,
-  required this.userRole,
-  this.onDeleted,
-});
+  const ActivityDetailScreen({
+    super.key,
+    required this.activity,
+    required this.userId,
+    required this.userRole,
+    this.onDeleted,
+    this.onCompleted,
+  });
 
   @override
   State<ActivityDetailScreen> createState() => _ActivityDetailScreenState();
@@ -24,19 +26,21 @@ const ActivityDetailScreen({
 class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   bool _isRegistering = false;
   bool _isUpdatingStatus = false;
+  bool _isNavigating = false;
   bool get isAdmin => widget.userRole == 'admin';
+
   String _getDaysRemaining() {
-  final eventDate = DateTime.tryParse(widget.activity.activityDate);
-  if (eventDate == null) return '';
-  final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-  final event = DateTime(eventDate.year, eventDate.month, eventDate.day);
-  final diff = event.difference(today).inDays;
-  if (diff == 0) return '🎉 Today!';
-  if (diff == 1) return '⏰ Tomorrow';
-  if (diff > 1) return '📅 In $diff days';
-  if (diff == -1) return '✅ Yesterday';
-  return '✅ ${diff.abs()} days ago';
-}
+    final eventDate = DateTime.tryParse(widget.activity.activityDate);
+    if (eventDate == null) return '';
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final event = DateTime(eventDate.year, eventDate.month, eventDate.day);
+    final diff = event.difference(today).inDays;
+    if (diff == 0) return '🎉 Today!';
+    if (diff == 1) return '⏰ Tomorrow';
+    if (diff > 1) return '📅 In $diff days';
+    if (diff == -1) return '✅ Yesterday';
+    return '✅ ${diff.abs()} days ago';
+  }
 
   Future<void> _register() async {
     setState(() => _isRegistering = true);
@@ -78,13 +82,11 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Mark Completed',
-                style: TextStyle(color: Colors.green)),
+            child: const Text('Mark Completed', style: TextStyle(color: Colors.green)),
           ),
         ],
       ),
     );
-
     if (confirm != true) return;
 
     setState(() => _isUpdatingStatus = true);
@@ -100,7 +102,10 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
           backgroundColor: Colors.green[700],
         ),
       );
-      widget.onDeleted?.call();
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      // onCompleted — removes from Upcoming Activities only
+      widget.onCompleted?.call();
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
@@ -134,17 +139,18 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
         ],
       ),
     );
-
     if (confirm != true) return;
 
     try {
       await ApiService.deleteActivity(widget.activity.activityId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Activity deleted'), backgroundColor: Colors.teal[700]),
-      );
+
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+
+      // onDeleted — removes from both Upcoming Activities and My Registrations
       widget.onDeleted?.call();
-      Navigator.of(context).pop('deleted');
+      Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -169,19 +175,24 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
         ),
-        // Admin edit shortcut in AppBar
         actions: isAdmin
             ? [
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Edit Activity',
                   onPressed: () async {
-                    final result = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                        builder: (_) => AddEditActivityScreen(activity: activity),
-                      ),
-                    );
-                    if (result == true && mounted) Navigator.of(context).pop(true);
+                    if (_isNavigating) return;
+                    setState(() => _isNavigating = true);
+                    try {
+                      final result = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(
+                          builder: (_) => AddEditActivityScreen(activity: activity),
+                        ),
+                      );
+                      if (result == true && mounted) Navigator.of(context).pop(true);
+                    } finally {
+                      if (mounted) setState(() => _isNavigating = false);
+                    }
                   },
                 ),
               ]
@@ -193,7 +204,6 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 8),
-            // Title banner
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -212,7 +222,8 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                   Expanded(
                     child: Text(
                       activity.title,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),
                 ],
@@ -220,7 +231,6 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Detail card
             Card(
               color: Colors.white,
               elevation: 2,
@@ -237,12 +247,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                     const Divider(height: 20),
                     _DetailRow(icon: Icons.people_outline, label: 'Capacity', value: '${activity.capacity} students', color: Colors.teal[500]!),
                     const Divider(height: 20),
-                    _DetailRow(
-                      icon: Icons.timer_outlined,
-                      label: 'Time Until Event',
-                      value: _getDaysRemaining(),
-                      color: Colors.teal[700]!,
-                    ),
+                    _DetailRow(icon: Icons.timer_outlined, label: 'Time Until Event', value: _getDaysRemaining(), color: Colors.teal[700]!),
                   ],
                 ),
               ),
@@ -250,19 +255,13 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
 
             const Spacer(),
 
-            // Admin buttons
             if (isAdmin) ...[
-              // Mark as Completed button
               ElevatedButton.icon(
                 onPressed: (_isUpdatingStatus || widget.activity.status == 'completed')
                     ? null
                     : _markAsCompleted,
                 icon: _isUpdatingStatus
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
+                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                     : const Icon(Icons.task_alt_outlined),
                 label: Text(
                   widget.activity.status == 'completed'
@@ -273,9 +272,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                 ),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: widget.activity.status == 'completed'
-                      ? Colors.grey[400]
-                      : Colors.green[700],
+                  backgroundColor: widget.activity.status == 'completed' ? Colors.grey[400] : Colors.green[700],
                   foregroundColor: Colors.white,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -296,7 +293,6 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
               const SizedBox(height: 10),
             ],
 
-            // Register button (everyone can register)
             ElevatedButton.icon(
               onPressed: _isRegistering ? null : _register,
               icon: _isRegistering

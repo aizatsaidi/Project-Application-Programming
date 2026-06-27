@@ -283,6 +283,11 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                                   builder: (_) => MyRegistrationsScreen(
                                     userId: widget.userId,
                                     userRole: widget.userRole,
+                                    onActivityDeleted: (activityId) {
+                                      setState(() {
+                                        _activities.removeWhere((a) => a.activityId == activityId);
+                                      });
+                                    },
                                   ),
                                 ),
                               ),
@@ -331,21 +336,32 @@ class _ActivityListScreenState extends State<ActivityListScreen> {
                                 accentColor: accentColor,
                                 isAdmin: isAdmin,
                                 onTap: () async {
-                                  final result = await Navigator.of(context).push<dynamic>(
-                                  MaterialPageRoute(
-                                    builder: (_) => ActivityDetailScreen(
-                                    activity: activity,
-                                    userId: widget.userId,
-                                    userRole: widget.userRole,
-                                    onDeleted: () {
-                                      setState(() {
-                                        _activities.removeWhere((a) => a.activityId == activity.activityId);
-                                      });
-                                    },
-                                  ),
-                                  ),
-                                );
-                                if (result == true) _loadActivities();
+                                  await Navigator.of(context).push<dynamic>(
+                                    MaterialPageRoute(
+                                      builder: (_) => ActivityDetailScreen(
+                                        activity: activity,
+                                        userId: widget.userId,
+                                        userRole: widget.userRole,
+                                        onDeleted: () {
+                                          setState(() {
+                                            _activities.removeWhere((a) => a.activityId == activity.activityId);
+                                          });
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: const Text('Activity deleted'),
+                                              backgroundColor: Colors.teal[700],
+                                            ),
+                                          );
+                                        },
+                                        onCompleted: () {
+                                          setState(() {
+                                            _activities.removeWhere((a) => a.activityId == activity.activityId);
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                  _loadActivities();
                                 },
                                 onEdit: () async {
                                   final result = await Navigator.of(context).push<bool>(
