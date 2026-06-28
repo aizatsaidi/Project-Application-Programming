@@ -245,17 +245,14 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
                                       userId: widget.userId,
                                       userRole: widget.userRole,
                                       onDeleted: () {
-                                        // Remove from My Registrations
                                         setState(() {
                                           _registrations.removeWhere(
                                             (r) => r['activity_id'].toString() == activityId.toString(),
                                           );
                                         });
-                                        // Also remove from Upcoming Activities
                                         widget.onActivityDeleted?.call(activityId);
                                       },
                                       onCompleted: () {
-                                        // Update the activity_status to 'completed' in the local list
                                         setState(() {
                                           for (int i = 0; i < _registrations.length; i++) {
                                             if (_registrations[i]['activity_id'].toString() == activityId.toString()) {
@@ -267,8 +264,21 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
                                             }
                                           }
                                         });
-                                        // Notify Upcoming Activities to remove it
                                         widget.onActivityDeleted?.call(activityId);
+                                      },
+                                      onReregistered: () {
+                                        setState(() {
+                                          for (int i = 0; i < _registrations.length; i++) {
+                                            if (_registrations[i]['activity_id'].toString() == activityId.toString()) {
+                                              _registrations[i] = {
+                                                ..._registrations[i],
+                                                'registration_status': 'registered',
+                                                'status': 'registered',
+                                              };
+                                              break;
+                                            }
+                                          }
+                                        });
                                       },
                                     ),
                                   ),

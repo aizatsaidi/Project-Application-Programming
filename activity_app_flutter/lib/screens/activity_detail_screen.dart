@@ -9,6 +9,7 @@ class ActivityDetailScreen extends StatefulWidget {
   final String userRole;
   final VoidCallback? onDeleted;
   final VoidCallback? onCompleted;
+  final VoidCallback? onReregistered;
 
   const ActivityDetailScreen({
     super.key,
@@ -17,6 +18,7 @@ class ActivityDetailScreen extends StatefulWidget {
     required this.userRole,
     this.onDeleted,
     this.onCompleted,
+    this.onReregistered,
   });
 
   @override
@@ -65,8 +67,13 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Successfully registered!'), backgroundColor: Colors.teal[700]),
+        SnackBar(
+          content: const Text('Successfully registered!'),
+          backgroundColor: Colors.teal[700],
+        ),
       );
+      // Notify parent to update registration status immediately
+      widget.onReregistered?.call();
       Navigator.of(context).pop(false);
     } catch (e) {
       if (!mounted) return;
@@ -139,7 +146,8 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Delete Activity'),
-        content: Text('Delete "${widget.activity.title}"? All registrations will also be removed.'),
+        content: Text(
+            'Delete "${widget.activity.title}"? All registrations will also be removed.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -243,7 +251,9 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                         child: Text(
                           activity.title,
                           style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
                         ),
                       ),
                     ],
@@ -255,18 +265,35 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                 Card(
                   color: Colors.white,
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        _DetailRow(icon: Icons.description_outlined, label: 'Description', value: activity.description, color: Colors.teal[700]!),
+                        _DetailRow(
+                            icon: Icons.description_outlined,
+                            label: 'Description',
+                            value: activity.description,
+                            color: Colors.teal[700]!),
                         const Divider(height: 20),
-                        _DetailRow(icon: Icons.location_on_outlined, label: 'Location', value: activity.location, color: Colors.green[700]!),
+                        _DetailRow(
+                            icon: Icons.location_on_outlined,
+                            label: 'Location',
+                            value: activity.location,
+                            color: Colors.green[700]!),
                         const Divider(height: 20),
-                        _DetailRow(icon: Icons.calendar_today_outlined, label: 'Date', value: activity.activityDate, color: Colors.teal[600]!),
+                        _DetailRow(
+                            icon: Icons.calendar_today_outlined,
+                            label: 'Date',
+                            value: activity.activityDate,
+                            color: Colors.teal[600]!),
                         const Divider(height: 20),
-                        _DetailRow(icon: Icons.people_outline, label: 'Capacity', value: '${activity.capacity} students', color: Colors.teal[500]!),
+                        _DetailRow(
+                            icon: Icons.people_outline,
+                            label: 'Capacity',
+                            value: '${activity.capacity} students',
+                            color: Colors.teal[500]!),
                         const Divider(height: 20),
                         _DetailRow(
                           icon: Icons.how_to_reg_outlined,
@@ -275,7 +302,11 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                           color: isFull ? Colors.red[600]! : Colors.teal[700]!,
                         ),
                         const Divider(height: 20),
-                        _DetailRow(icon: Icons.timer_outlined, label: 'Time Until Event', value: _getDaysRemaining(), color: Colors.teal[700]!),
+                        _DetailRow(
+                            icon: Icons.timer_outlined,
+                            label: 'Time Until Event',
+                            value: _getDaysRemaining(),
+                            color: Colors.teal[700]!),
                       ],
                     ),
                   ),
@@ -286,11 +317,16 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                 // Admin buttons
                 if (isAdmin) ...[
                   ElevatedButton.icon(
-                    onPressed: (_isUpdatingStatus || widget.activity.status == 'completed')
+                    onPressed: (_isUpdatingStatus ||
+                            widget.activity.status == 'completed')
                         ? null
                         : _markAsCompleted,
                     icon: _isUpdatingStatus
-                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2))
                         : const Icon(Icons.task_alt_outlined),
                     label: Text(
                       widget.activity.status == 'completed'
@@ -301,10 +337,13 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                     ),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: widget.activity.status == 'completed' ? Colors.grey[400] : Colors.green[700],
+                      backgroundColor: widget.activity.status == 'completed'
+                          ? Colors.grey[400]
+                          : Colors.green[700],
                       foregroundColor: Colors.white,
                       minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -316,7 +355,8 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
                       minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -326,22 +366,31 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                 ElevatedButton.icon(
                   onPressed: (_isRegistering || isFull) ? null : _register,
                   icon: _isRegistering
-                      ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Icon(isFull ? Icons.block : Icons.check_circle_outline),
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : Icon(isFull
+                          ? Icons.block
+                          : Icons.check_circle_outline),
                   label: Text(
                     _isRegistering
                         ? 'Registering...'
                         : isFull
                             ? 'Activity Full'
                             : 'Register for this Activity',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: isFull ? Colors.grey[400] : Colors.teal[700],
+                    backgroundColor:
+                        isFull ? Colors.grey[400] : Colors.teal[700],
                     foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30)),
                     elevation: 2,
                   ),
                 ),
@@ -361,7 +410,11 @@ class _DetailRow extends StatelessWidget {
   final String value;
   final Color color;
 
-  const _DetailRow({required this.icon, required this.label, required this.value, required this.color});
+  const _DetailRow(
+      {required this.icon,
+      required this.label,
+      required this.value,
+      required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -381,7 +434,11 @@ class _DetailRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[500],
+                      fontWeight: FontWeight.w500)),
               const SizedBox(height: 2),
               Text(value, style: const TextStyle(fontSize: 15)),
             ],
@@ -401,18 +458,26 @@ class _BackgroundPatternPainter extends CustomPainter {
     final circlePaint2 = Paint()
       ..color = Colors.green.withOpacity(0.11)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(size.width * 0.92, size.height * 0.08), 110, circlePaint);
-    canvas.drawCircle(Offset(size.width * 0.05, size.height * 0.30), 90, circlePaint2);
-    canvas.drawCircle(Offset(size.width * 0.88, size.height * 0.55), 80, circlePaint);
-    canvas.drawCircle(Offset(size.width * 0.15, size.height * 0.75), 70, circlePaint2);
-    canvas.drawCircle(Offset(size.width * 0.70, size.height * 0.90), 95, circlePaint);
+    canvas.drawCircle(
+        Offset(size.width * 0.92, size.height * 0.08), 110, circlePaint);
+    canvas.drawCircle(
+        Offset(size.width * 0.05, size.height * 0.30), 90, circlePaint2);
+    canvas.drawCircle(
+        Offset(size.width * 0.88, size.height * 0.55), 80, circlePaint);
+    canvas.drawCircle(
+        Offset(size.width * 0.15, size.height * 0.75), 70, circlePaint2);
+    canvas.drawCircle(
+        Offset(size.width * 0.70, size.height * 0.90), 95, circlePaint);
     final ringPaint = Paint()
       ..color = Colors.teal.withOpacity(0.10)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 18;
-    canvas.drawCircle(Offset(size.width * 0.92, size.height * 0.08), 160, ringPaint);
-    canvas.drawCircle(Offset(size.width * 0.05, size.height * 0.30), 140, ringPaint);
-    canvas.drawCircle(Offset(size.width * 0.88, size.height * 0.55), 130, ringPaint);
+    canvas.drawCircle(
+        Offset(size.width * 0.92, size.height * 0.08), 160, ringPaint);
+    canvas.drawCircle(
+        Offset(size.width * 0.05, size.height * 0.30), 140, ringPaint);
+    canvas.drawCircle(
+        Offset(size.width * 0.88, size.height * 0.55), 130, ringPaint);
     final dotPaint = Paint()
       ..color = Colors.teal.withOpacity(0.20)
       ..style = PaintingStyle.fill;
